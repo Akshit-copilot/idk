@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snake Game</title>
+  <style>
+    body { background: #111; color: #fff; text-align: center; }
+    canvas { background: #222; display: block; margin: 20px auto; }
+    #score { font-size: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Snake Game</h1>
+  <div id="score">Score: 0 | High Score: 0</div>
+  <canvas id="game" width="400" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const box = 20;
+    let snake = [{x: 100, y: 100}, {x: 80, y: 100}, {x: 60, y: 100}];
+    let direction = {x: box, y: 0};
+    let food = {
+      x: Math.floor(Math.random() * 20) * box,
+      y: Math.floor(Math.random() * 20) * box
+    };
+    let score = 0;
+    let highScore = localStorage.getItem('snakeHighScore') || 0;
+    let speed = 5;
+    let interval = null;
+    let gameOver = false;
+
+    function draw() {
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, 400, 400);
+
+      for (let s of snake) {
+        ctx.fillStyle = "#0f0";
+        ctx.fillRect(s.x, s.y, box, box);
+      }
+
+      ctx.fillStyle = "#f00";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      document.getElementById('score').textContent = `Score: ${score} | High Score: ${highScore}`;
+    }
+
+    function move() {
+      if (gameOver) return;
+      let head = {x: (snake[0].x + direction.x + 400) % 400, y: (snake[0].y + direction.y + 400) % 400};
+      // Self collision
+      if (snake.some((s, i) => i && s.x === head.x && s.y === head.y)) {
+        gameOver = true;
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem('snakeHighScore', highScore);
+        }
+        setTimeout(() => {
+          if (confirm('Game Over!\nScore: ' + score + '\nHigh Score: ' + highScore + '\n\nPress OK to restart.')) {
+            restart();
+          }
+        }, 100);
+        return;
+      }
+      snake.unshift(head);
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        speed = Math.min(20, 5 + Math.floor(score / 5));
+        food = {
+          x: Math.floor(Math.random() * 20) * box,
+          y: Math.floor(Math.random() * 20) * box
+        };
+      } else {
+        snake.pop();
+      }
+      draw();
+    }
+
+    function restart() {
+      snake = [{x: 100, y: 100}, {x: 80, y: 100}, {x: 60, y: 100}];
+      direction = {x: box, y: 0};
+      food = {
+        x: Math.floor(Math.random() * 20) * box,
+        y: Math.floor(Math.random() * 20) * box
+      };
+      score = 0;
+      speed = 5;
+      gameOver = false;
+      clearInterval(interval);
+      interval = setInterval(move, 1000 / speed);
+    }
+
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'ArrowUp' || e.key === 'w') && direction.y === 0) direction = {x: 0, y: -box};
+      else if ((e.key === 'ArrowDown' || e.key === 's') && direction.y === 0) direction = {x: 0, y: box};
+      else if ((e.key === 'ArrowLeft' || e.key === 'a') && direction.x === 0) direction = {x: -box, y: 0};
+      else if ((e.key === 'ArrowRight' || e.key === 'd') && direction.x === 0) direction = {x: box, y: 0};
+    });
+
+    // Dynamic speed adjustment
+    function updateInterval() {
+      clearInterval(interval);
+      interval = setInterval(() => {
+        move();
+        if (!gameOver) {
+          let newSpeed = Math.min(20, 5 + Math.floor(score / 5));
+          if (newSpeed !== speed) {
+            speed = newSpeed;
+            updateInterval();
+          }
+        }
+      }, 1000 / speed);
+    }
+
+    draw();
+    updateInterval();
+  </script>
